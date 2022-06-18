@@ -26,6 +26,7 @@
           inherit system;
           overlays = [
             devshell.overlay
+            (import ./overlay.nix)
           ];
         };
       in rec {
@@ -61,30 +62,14 @@
         #     '';
         #   }
         # );
-        packages.bundled = pkgs.stdenv.mkDerivation (
-          let
-            deps = ((import ./deno.nix) {inherit pkgs;}).deps;
-          in rec {
-            pname = "example-bundle";
-            version = "0.1.0";
-            src = self;
-
-            buildInputs = with pkgs; [
-              deno
-              jq
-            ];
-
-            buildPhase = ''
-              export DENO_DIR=`mktemp -d`
-              ln -s "${deps}" $(deno info --json | jq -r .modulesCache)
-              deno bundle --import-map=./import_map.json ./mod.ts ./mod.min.js
-            '';
-            installPhase = ''
-              mkdir -p $out/dist
-              install -t $out/dist ./mod.min.js
-            '';
-          }
-        );
+        packages.bundled = pkgs.mkDenoBundled {
+          name = "example-bundle";
+          version = "0.1.0";
+          src = self;
+          lockfile = ./lock.json;
+          importmap = ./import_map.json;
+          entrypoint = ./mod.ts;
+        };
         packages.bundled-wrapper =
           pkgs.writeShellScriptBin "wrapper"
           "${pkgs.deno}/bin/deno run ${packages.bundled}/dist/mod.min.js";
