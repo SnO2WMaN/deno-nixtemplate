@@ -1,7 +1,7 @@
 final: prev: let
-  inherit (builtins) readFile hashString split elemAt fetchurl toJSON;
-  inherit (prev) linkFarm writeText stdenv;
-  inherit (prev.lib) flatten mapAttrsToList importJSON;
+  inherit (builtins) readFile hashString split elemAt fetchurl toJSON baseNameOf;
+  inherit (prev) linkFarm writeText stdenv writeShellScriptBin;
+  inherit (prev.lib) flatten mapAttrsToList importJSON cleanSourceWith;
 
   urlPart = url: elemAt (flatten (split "://([a-z0-9\.]*)" url));
   artifactPath = url: "${urlPart url 0}/${urlPart url 1}/${hashString "sha256" (urlPart url 2)}";
@@ -26,10 +26,19 @@ final: prev: let
       )
       (importJSON lockfile)
     ));
-in {
-  mkDenoBundled = {lockfile, ...} @ args:
+in rec {
+  mkDenoBundled = {
+    lockfile,
+    src,
+    ...
+  } @ args:
     stdenv.mkDerivation {
-      inherit (args) name version src importmap entrypoint;
+      inherit (args) name version importmap entrypoint;
+
+      src = cleanSourceWith {
+        inherit src;
+        filter = path: type: (baseNameOf path != "bundled.js");
+      };
       buildInputs = with prev; [
         deno
         jq
@@ -39,12 +48,23 @@ in {
         export DENO_DIR=`mktemp -d`
         ln -s "${mkDepsLink lockfile}" $(deno info --json | jq -r .modulesCache)
 
-        deno bundle --import-map=$importmap $entrypoint ./mod.min.js
+        deno bundle --import-map=$importmap $entrypoint bundled.js
       '';
       installPhase = ''
         mkdir -p $out/dist
-        install -t $out/dist ./mod.min.js
+        install -t $out/dist bundled.js
       '';
     };
+  mkDenoBundledWrapper = {
+    name,
+    entrypoint,
+    ...
+  } @ args: let
+    bundled = mkDenoBundled args;
+  in
+    writeShellScriptBin
+    "${name}"
+    "${prev.deno}/bin/deno run ${bundled}/dist/bundled.js";
+
   mkDenoCompiled = {pkgs}: {};
 }

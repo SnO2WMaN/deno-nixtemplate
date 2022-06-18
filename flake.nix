@@ -62,24 +62,20 @@
         #     '';
         #   }
         # );
-        packages.bundled = pkgs.mkDenoBundled {
-          name = "example-bundle";
+        packages.default = pkgs.mkDenoBundledWrapper {
+          name = "example";
           version = "0.1.0";
           src = self;
           lockfile = ./lock.json;
           importmap = ./import_map.json;
           entrypoint = ./mod.ts;
         };
-        packages.bundled-wrapper =
-          pkgs.writeShellScriptBin "wrapper"
-          "${pkgs.deno}/bin/deno run ${packages.bundled}/dist/mod.min.js";
-        packages.default = packages.bundled-wrapper;
 
         defaultPackage = packages.default;
 
         apps.default = {
           type = "app";
-          program = "${packages.bundled-wrapper}/bin/wrapper";
+          program = "${defaultPackage}/bin/example";
         };
 
         devShell = pkgs.devshell.mkShell {
