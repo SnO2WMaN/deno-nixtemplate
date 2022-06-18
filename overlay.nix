@@ -27,34 +27,7 @@ final: prev: let
       (importJSON lockfile)
     ));
 in {
-  mkDenoBundled = {
-    name,
-    version,
-    src,
-    importmap,
-    entrypoint,
-    lockfile,
-  } @ args: let
-    deps = linkFarm "deps" (flatten (
-      mapAttrsToList
-      (
-        url: sha256: [
-          {
-            name = artifactPath url;
-            path = fetchurl {inherit url sha256;};
-          }
-          {
-            name = (artifactPath url) + ".metadata.json";
-            path = writeText "metadata.json" (toJSON {
-              inherit url;
-              headers = {};
-            });
-          }
-        ]
-      )
-      (importJSON ./lock.json)
-    ));
-  in
+  mkDenoBundled = {lockfile, ...} @ args:
     stdenv.mkDerivation {
       inherit (args) name version src importmap entrypoint;
       buildInputs = with prev; [
