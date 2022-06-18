@@ -1,7 +1,9 @@
 {
   "tasks": {
     "run": "deno run ./mod.ts",
-    "compile": "deno compile --output=dist/ ./mod.ts"
+    "compile:x86_64-linux": "deno compile --output=dist/out --target=x86_64-unknown-linux-gnu ./mod.ts",
+    "compile:x86_64-darwin": "deno compile --output=dist/out --target=x86_64-darwin ./mod.ts",
+    "compile:aarch64-darwin": "deno compile --output=dist/out --target=aarch64-darwin ./mod.ts"
   },
   "importMap": "./import_map.json",
   "fmt": {
@@ -12,6 +14,9 @@
       "useTabs": false
     },
     "files": {
+      "exclude": [
+        "./lock.json"
+      ]
     }
   }
 }
