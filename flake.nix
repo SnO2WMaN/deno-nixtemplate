@@ -18,8 +18,6 @@
   } @ inputs:
     flake-utils.lib.eachSystem
     [
-      "aarch64-darwin"
-      "x86_64-darwin"
       "x86_64-linux"
     ]
     (
@@ -31,24 +29,73 @@
           ];
         };
       in rec {
-        packages.default = pkgs.stdenv.mkDerivation rec {
-          pname = "example";
-          version = "0.1.0";
-          src = self;
+        # packages.default = pkgs.stdenv.mkDerivation (
+        #   let
+        #     deps = ((import ./deno.nix) {inherit pkgs;}).deps;
+        #   in rec {
+        #     pname = "example";
+        #     version = "0.1.0";
+        #     src = pkgs.lib.cleanSourceWith {
+        #       src = self;
+        #       filter = path: type: (
+        #         (baseNameOf path != ".direnv")
+        #         && (baseNameOf path != ".vscode")
+        #         && (baseNameOf path != "dist")
+        #       );
+        #     };
+        #
+        #     buildInputs = with pkgs; [
+        #       deno
+        #       jq
+        #     ];
+        #
+        #     buildPhase = ''
+        #       export DENO_DIR=`mktemp -d`
+        #       ln -s "${deps}" $(deno info --json | jq -r .modulesCache)
+        #       # deno task compile
+        #       deno compile --import-map=./import_map.json --output=dist/out ./mod.ts
+        #     '';
+        #     installPhase = ''
+        #       mkdir -p $out/bin
+        #       install -t $out/bin dist/out
+        #     '';
+        #   }
+        # );
+        packages.bundled = pkgs.stdenv.mkDerivation (
+          let
+            deps = ((import ./deno.nix) {inherit pkgs;}).deps;
+          in rec {
+            pname = "example-bundle";
+            version = "0.1.0";
+            src = self;
 
-          buildInputs = [pkgs.deno];
+            buildInputs = with pkgs; [
+              deno
+              jq
+            ];
 
-          buildPhase = ''
-            export DENO_DIR=$TMP
-            # deno cache --reload --lock=./lock.json $sourceRoot/mod.ts
-            deno task compile:${system}
-          '';
-          installPhase = ''
-            mkdir -p $out/bin
-            install -t $out/bin dist/out
-          '';
-        };
+            buildPhase = ''
+              export DENO_DIR=`mktemp -d`
+              ln -s "${deps}" $(deno info --json | jq -r .modulesCache)
+              deno bundle --import-map=./import_map.json ./mod.ts ./mod.min.js
+            '';
+            installPhase = ''
+              mkdir -p $out/dist
+              install -t $out/dist ./mod.min.js
+            '';
+          }
+        );
+        packages.bundled-wrapper =
+          pkgs.writeShellScriptBin "wrapper"
+          "${pkgs.deno}/bin/deno run ${packages.bundled}/dist/mod.min.js";
+        packages.default = packages.bundled-wrapper;
+
         defaultPackage = packages.default;
+
+        apps.default = {
+          type = "app";
+          program = "${packages.bundled-wrapper}/bin/wrapper";
+        };
 
         devShell = pkgs.devshell.mkShell {
           imports = [
