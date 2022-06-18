@@ -28,12 +28,16 @@ final: prev: let
     ));
 in rec {
   mkDenoBundled = {
-    lockfile,
+    name,
+    version,
     src,
+    entrypoint,
+    lockfile,
+    importmap ? null,
     ...
-  } @ args:
+  }:
     stdenv.mkDerivation {
-      inherit (args) name version importmap entrypoint;
+      inherit name version entrypoint importmap;
 
       src = cleanSourceWith {
         inherit src;
@@ -48,7 +52,11 @@ in rec {
         export DENO_DIR=`mktemp -d`
         ln -s "${mkDepsLink lockfile}" $(deno info --json | jq -r .modulesCache)
 
-        deno bundle --import-map=$importmap $entrypoint bundled.js
+        if [ -n "$importmap" ]; then
+          deno bundle --import-map=$importmap $entrypoint bundled.js
+        else
+          deno bundle $entrypoint bundled.js
+        fi
       '';
       installPhase = ''
         mkdir -p $out/dist
