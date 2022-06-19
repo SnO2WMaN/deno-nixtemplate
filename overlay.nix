@@ -74,5 +74,40 @@ in rec {
     "${name}"
     "${prev.deno}/bin/deno run ${bundled}/dist/bundled.js";
 
-  mkDenoCompiled = {pkgs}: {};
+  mkDenoCompiled = {
+    name,
+    version,
+    src,
+    entrypoint,
+    lockfile,
+    importmap ? null,
+  }:
+    stdenv.mkDerivation {
+      inherit name version entrypoint importmap lockfile;
+
+      src = cleanSourceWith {
+        inherit src;
+        filter = path: type: (baseNameOf path != name);
+      };
+      buildInputs = with prev; [
+        deno
+        jq
+      ];
+      fixupPhase = ":";
+
+      buildPhase = ''
+        export DENO_DIR=`mktemp -d`
+        ln -s "${mkDepsLink lockfile}" $(deno info --json | jq -r .modulesCache)
+
+        if [ -n "$importmap" ]; then
+          deno compile $denoFlags --import-map="$importmap" --lock="$lockfile" --cached-only --output="$name" "$entrypoint"
+        else
+          deno compile $denoFlags --lock="$lockfile" --output="$name" "$entrypoint"
+        fi
+      '';
+      installPhase = ''
+        mkdir -p $out/bin
+        mv "$name" "$out/bin/"
+      '';
+    };
 }
