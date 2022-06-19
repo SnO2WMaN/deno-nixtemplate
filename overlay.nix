@@ -34,9 +34,17 @@ in rec {
     entrypoint,
     lockfile,
     importmap ? null,
+    denoFlags ? [],
   }:
     stdenv.mkDerivation {
       inherit name version entrypoint importmap;
+      denoFlags =
+        denoFlags
+        ++ (
+          if importmap != null
+          then ["--import-map" importmap]
+          else []
+        );
 
       src = cleanSourceWith {
         inherit src;
@@ -51,11 +59,7 @@ in rec {
         export DENO_DIR=`mktemp -d`
         ln -s "${mkDepsLink lockfile}" $(deno info --json | jq -r .modulesCache)
 
-        if [ -n "$importmap" ]; then
-          deno bundle --import-map=$importmap $entrypoint bundled.js
-        else
-          deno bundle $entrypoint bundled.js
-        fi
+        deno bundle $denoFlags $entrypoint bundled.js
       '';
       installPhase = ''
         mkdir -p $out/dist
@@ -80,9 +84,20 @@ in rec {
     entrypoint,
     lockfile,
     importmap ? null,
+    denoFlags ? [],
   }:
     stdenv.mkDerivation {
-      inherit name version entrypoint importmap lockfile;
+      inherit name entrypoint;
+      denoFlags =
+        denoFlags
+        ++ ["--lock" lockfile]
+        ++ ["--cached-only"]
+        ++ ["--output" name]
+        ++ (
+          if importmap != null
+          then ["--import-map" importmap]
+          else []
+        );
 
       src = cleanSourceWith {
         inherit src;
@@ -98,11 +113,7 @@ in rec {
         export DENO_DIR=`mktemp -d`
         ln -s "${mkDepsLink lockfile}" $(deno info --json | jq -r .modulesCache)
 
-        if [ -n "$importmap" ]; then
-          deno compile $denoFlags --import-map="$importmap" --lock="$lockfile" --cached-only --output="$name" "$entrypoint"
-        else
-          deno compile $denoFlags --lock="$lockfile" --output="$name" "$entrypoint"
-        fi
+        deno compile $denoFlags "$entrypoint"
       '';
       installPhase = ''
         mkdir -p $out/bin
