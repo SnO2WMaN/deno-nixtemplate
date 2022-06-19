@@ -30,39 +30,7 @@
           ];
         };
       in rec {
-        # packages.default = pkgs.stdenv.mkDerivation (
-        #   let
-        #     deps = ((import ./deno.nix) {inherit pkgs;}).deps;
-        #   in rec {
-        #     pname = "example";
-        #     version = "0.1.0";
-        #     src = pkgs.lib.cleanSourceWith {
-        #       src = self;
-        #       filter = path: type: (
-        #         (baseNameOf path != ".direnv")
-        #         && (baseNameOf path != ".vscode")
-        #         && (baseNameOf path != "dist")
-        #       );
-        #     };
-        #
-        #     buildInputs = with pkgs; [
-        #       deno
-        #       jq
-        #     ];
-        #
-        #     buildPhase = ''
-        #       export DENO_DIR=`mktemp -d`
-        #       ln -s "${deps}" $(deno info --json | jq -r .modulesCache)
-        #       # deno task compile
-        #       deno compile --import-map=./import_map.json --output=dist/out ./mod.ts
-        #     '';
-        #     installPhase = ''
-        #       mkdir -p $out/bin
-        #       install -t $out/bin dist/out
-        #     '';
-        #   }
-        # );
-        packages.default = pkgs.mkDenoBundledWrapper {
+        packages.default = pkgs.mkDenoCompiled {
           name = "example";
           version = "0.1.0";
           src = self;

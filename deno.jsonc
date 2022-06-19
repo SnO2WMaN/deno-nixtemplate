@@ -5,7 +5,6 @@
     "compile:x86_64-darwin": "deno compile --output=dist/out --target=x86_64-darwin ./mod.ts",
     "compile:aarch64-darwin": "deno compile --output=dist/out --target=aarch64-darwin ./mod.ts"
   },
-  "importMap": "./import_map.json",
   "fmt": {
     "options": {
       "lineWidth": 120,
