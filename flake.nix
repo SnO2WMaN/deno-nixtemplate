@@ -3,6 +3,7 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     devshell.url = "github:numtide/devshell";
+    deno2nix.url = "github:SnO2WMaN/deno2nix";
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -14,6 +15,7 @@
     nixpkgs,
     flake-utils,
     devshell,
+    deno2nix,
     ...
   } @ inputs:
     flake-utils.lib.eachSystem
@@ -26,16 +28,16 @@
           inherit system;
           overlays = [
             devshell.overlay
-            (import ./overlay.nix)
+            deno2nix.overlay
           ];
         };
       in rec {
-        packages.default = pkgs.mkDenoCompiled {
+        packages.default = pkgs.deno2nix.mkExecutable {
           name = "example";
           version = "0.1.0";
           src = self;
           lockfile = ./lock.json;
-          importmap = ./import_map.json;
+          importMap = ./import_map.json;
           entrypoint = ./mod.ts;
         };
 
