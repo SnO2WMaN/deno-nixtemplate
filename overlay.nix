@@ -34,7 +34,6 @@ in rec {
     entrypoint,
     lockfile,
     importmap ? null,
-    ...
   }:
     stdenv.mkDerivation {
       inherit name version entrypoint importmap;
