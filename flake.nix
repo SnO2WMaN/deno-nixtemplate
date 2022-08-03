@@ -31,7 +31,7 @@
             deno2nix.overlay
           ];
         };
-      in rec {
+      in {
         packages.default = pkgs.deno2nix.mkExecutable {
           name = "example";
           version = "0.1.0";
@@ -40,13 +40,13 @@
           importMap = ./import_map.json;
           entrypoint = ./mod.ts;
         };
+        defaultPackage = self.packages.${system}.default;
 
-        defaultPackage = packages.default;
-
-        apps.default = {
-          type = "app";
-          program = "${defaultPackage}/bin/example";
+        apps.default = flake-utils.lib.mkApp {
+          drv = self.packages.${system}.executable;
         };
+
+        checks = self.packages.${system};
 
         devShell = pkgs.devshell.mkShell {
           imports = [
