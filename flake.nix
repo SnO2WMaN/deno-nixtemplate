@@ -14,8 +14,6 @@
     self,
     nixpkgs,
     flake-utils,
-    devshell,
-    deno2nix,
     ...
   } @ inputs:
     flake-utils.lib.eachSystem
@@ -26,31 +24,44 @@
       system: let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [
+          overlays = with inputs; [
             devshell.overlay
-            deno2nix.overlay
+            deno2nix.overlays.default
           ];
         };
       in {
         packages.default = pkgs.deno2nix.mkExecutable {
-          name = "example";
+          pname = "example";
           version = "0.1.0";
-          src = self;
+
+          src = ./.;
           lockfile = ./lock.json;
-          importMap = ./import_map.json;
-          entrypoint = ./mod.ts;
+
+          output = "example";
+          entrypoint = "./mod.ts";
+          importMap = "./import_map.json";
         };
         defaultPackage = self.packages.${system}.default;
 
         apps.default = flake-utils.lib.mkApp {
-          drv = self.packages.${system}.executable;
+          name = "example";
+          drv = self.packages.${system}.default;
         };
 
         checks = self.packages.${system};
 
-        devShell = pkgs.devshell.mkShell {
-          imports = [
-            (pkgs.devshell.importTOML ./devshell.toml)
+        devShells.default = pkgs.devshell.mkShell {
+          packages = with pkgs; [
+            alejandra
+            deno
+            treefmt
+            taplo-cli
+          ];
+          commands = [
+            {
+              package = "treefmt";
+              category = "formatters";
+            }
           ];
         };
       }
